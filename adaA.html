@@ -1,0 +1,579 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>binary tree simulator</title>
+
+  <style>
+    :root{
+      --bg0:#050509;
+      --bg1:#070712;
+      --panel:#0b0b16;
+      --panel2:#0f0f1d;
+
+      --text:#f2f4ff;
+      --muted:#a7acc4;
+
+      --border:rgba(255,255,255,0.08);
+      --edge:#2a2a3a;
+
+      --visited:#2ed573;
+      --current:#ff4757;
+
+      --shadow: 0 20px 70px rgba(0,0,0,0.65);
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+
+    body{
+      margin:0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(1000px 700px at 15% 0%, rgba(255,255,255,0.05), transparent 60%),
+        radial-gradient(900px 600px at 90% 15%, rgba(255,71,87,0.10), transparent 55%),
+        radial-gradient(900px 650px at 70% 95%, rgba(46,213,115,0.10), transparent 55%),
+        linear-gradient(180deg, var(--bg1), var(--bg0));
+      padding:22px;
+    }
+
+    .app{
+      max-width: 1280px;
+      margin:0 auto;
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015));
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,0.04);
+      overflow:hidden;
+    }
+
+    .topbar{
+      padding: 18px 20px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      flex-wrap:wrap;
+    }
+
+    .title{
+      margin:0;
+      text-transform: lowercase;
+      letter-spacing: 0.6px;
+      font-size: 2rem;
+      font-weight: 800;
+      color: #ffffff;
+      text-shadow: 0 0 18px rgba(255,255,255,0.12);
+      white-space:nowrap;
+    }
+
+    .controls{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
+    button{
+      border:none;
+      cursor:pointer;
+      padding: 10px 18px;
+      border-radius: 12px;
+      font-weight: 800;
+      color:#08080f;
+      transition: transform 0.18s ease, filter 0.18s ease, box-shadow 0.18s ease;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.35);
+      user-select:none;
+    }
+    button:hover:not(:disabled){
+      transform: translateY(-1px);
+      filter: brightness(1.07);
+      box-shadow: 0 14px 38px rgba(0,0,0,0.5);
+    }
+    button:disabled{
+      cursor:not-allowed;
+      opacity:0.55;
+      filter: grayscale(0.3);
+      box-shadow:none;
+    }
+    .btn-gen{ background: #3a3a48; color: #f2f4ff; }
+    .btn-pre{ background: #ff9f43; }
+    .btn-in{ background: #2ed573; }
+    .btn-post{ background: #a55eea; }
+
+    /* Side-by-side */
+    .content{
+      display:grid;
+      grid-template-columns: 1fr 1.4fr;
+      gap: 18px;
+      padding: 18px;
+      align-items:start;
+    }
+    @media (max-width: 980px){
+      .content{ grid-template-columns: 1fr; }
+      .controls{ justify-content:flex-start; }
+    }
+
+    .panel{
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 14px 50px rgba(0,0,0,0.55);
+      overflow:hidden;
+    }
+    .panel-inner{ padding: 16px 16px; }
+
+    .section-title{
+      margin:0 0 10px;
+      font-size: 1.25rem;
+      color:#ffffff;
+      letter-spacing:0.3px;
+    }
+
+    .rules p{
+      margin: 8px 0 12px;
+      line-height:1.6;
+      color: var(--text);
+    }
+    .rules strong{ color:#ffffff; }
+
+    hr{
+      border:none;
+      height:1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.14), transparent);
+      margin: 14px 0;
+    }
+
+    .custom-tree-controls{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:10px;
+    }
+    input{
+      flex:1;
+      min-width: 260px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(0,0,0,0.35);
+      color: var(--text);
+      outline:none;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
+      font-size: 1rem;
+    }
+    input::placeholder{ color: rgba(242,244,255,0.45); }
+
+    .canvas-wrap{
+      padding: 14px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    }
+
+    canvas{
+      width:100%;
+      height:auto;
+      display:block;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: radial-gradient(700px 350px at 50% 10%, rgba(255,255,255,0.04), transparent 60%),
+                  linear-gradient(180deg, #070711, #050509);
+      box-shadow: inset 0 0 60px rgba(255,255,255,0.03);
+    }
+
+    .output{
+      margin-top: 12px;
+      padding: 14px 16px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      border-left: 5px solid rgba(255,255,255,0.22);
+    }
+    #traversalPath{
+      margin-top: 6px;
+      font-family: "Courier New", Courier, monospace;
+      font-weight: 800;
+      color: #ffffff;
+      text-shadow: 0 0 14px rgba(255,255,255,0.12);
+      word-wrap: break-word;
+      min-height:1.6em;
+    }
+
+    .legend{
+      margin-top: 12px;
+      display:flex;
+      gap:16px;
+      justify-content:center;
+      flex-wrap:wrap;
+      color: var(--muted);
+    }
+    .dot{
+      width:12px; height:12px;
+      border-radius:50%;
+      display:inline-block;
+      margin-right:7px;
+      vertical-align:middle;
+      box-shadow: 0 0 10px rgba(255,255,255,0.10);
+    }
+    .dot.visited{ background: var(--visited); box-shadow: 0 0 18px rgba(46,213,115,0.45), 0 0 42px rgba(46,213,115,0.22); }
+    .dot.current{ background: var(--current); box-shadow: 0 0 20px rgba(255,71,87,0.9), 0 0 52px rgba(255,71,87,0.42); }
+    .dot.unvisited{ background: #ffffff; }
+
+    .small{ color: var(--muted); font-size: 0.9rem; }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <div class="topbar">
+      <h1 class="title">binary tree simulator</h1>
+      <div class="controls">
+        <button class="btn-gen" onclick="resetTree()">Generate Random Tree</button>
+        <button class="btn-pre" id="preBtn" onclick="runTraversal('preorder')">Pre-order</button>
+        <button class="btn-in" id="inBtn" onclick="runTraversal('inorder')">In-order</button>
+        <button class="btn-post" id="postBtn" onclick="runTraversal('postorder')">Post-order</button>
+      </div>
+    </div>
+
+    <div class="content">
+      <!-- LEFT -->
+      <div class="panel">
+        <div class="panel-inner rules">
+          <h3 class="section-title">Traversal Rules</h3>
+
+          <p><strong>Pre-order (Root → Left → Right)</strong><br>
+            Visit the current node first, then move to the left subtree, then the right subtree.
+          </p>
+
+          <p><strong>In-order (Left → Root → Right)</strong><br>
+            Visit the left subtree first, then the current node, then the right subtree.
+          </p>
+
+          <p><strong>Post-order (Left → Right → Root)</strong><br>
+            Visit the left subtree first, then the right subtree, and visit the current node at the end.
+          </p>
+
+          <hr>
+
+          <h3 class="section-title">Create Your Own Tree</h3>
+          <p class="small">
+            Enter numbers separated by commas. Example: <b>50,30,70,20,40,60,80</b>
+          </p>
+
+          <div class="custom-tree-controls">
+            <input type="text" id="treeInput" placeholder="Enter node values (e.g., 10,30,40,50,20,60)" />
+            <button onclick="buildCustomTree()">Insert Tree</button>
+          </div>
+
+          <p class="small" style="margin-top:10px;">
+            Tip: If you insert sorted numbers, the BST becomes skewed (deep). This simulator auto-fits the drawing now.
+          </p>
+        </div>
+      </div>
+
+      <!-- RIGHT -->
+      <div class="panel">
+        <div class="canvas-wrap">
+          <canvas id="treeCanvas" width="980" height="560"></canvas>
+
+          <div class="output" aria-live="polite">
+            <strong>Traversal Sequence:</strong>
+            <div id="traversalPath">Ready...</div>
+          </div>
+
+          <div class="legend">
+            <span><span class="dot visited"></span>Visited</span>
+            <span><span class="dot current"></span>Currently Processing (glowing)</span>
+            <span><span class="dot unvisited"></span>Not Visited</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const canvas = document.getElementById('treeCanvas');
+  const ctx = canvas.getContext('2d');
+  const pathDiv = document.getElementById('traversalPath');
+
+  class Node {
+    constructor(value){
+      this.value = value;
+      this.left = null;
+      this.right = null;
+      this.x = 0;
+      this.y = 0;
+    }
+  }
+
+  let treeRoot = null;
+  let isRunning = false;
+  const SLEEP_MS = 700;
+
+  const css = getComputedStyle(document.documentElement);
+  const COLORS = {
+    edge: css.getPropertyValue('--edge').trim() || '#2a2a3a',
+    visited: css.getPropertyValue('--visited').trim() || '#2ed573',
+    current: css.getPropertyValue('--current').trim() || '#ff4757',
+  };
+
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+  function resetTree(){
+    if (isRunning) return;
+    treeRoot = null;
+
+    const values = Array.from({length: 12}, () => Math.floor(Math.random() * 100));
+    values.forEach(v => treeRoot = insertBST(treeRoot, v));
+
+    pathDiv.innerText = "New random tree generated.";
+    draw();
+  }
+
+  function buildCustomTree(){
+    if (isRunning) return;
+    const input = document.getElementById('treeInput').value;
+
+    if (!input.trim()){
+      alert("Please enter node values.");
+      return;
+    }
+
+    const values = input
+      .split(',')
+      .map(v => parseInt(v.trim()))
+      .filter(v => !isNaN(v));
+
+    if (values.length === 0){
+      alert("Invalid input.");
+      return;
+    }
+
+    treeRoot = null;
+    values.forEach(v => treeRoot = insertBST(treeRoot, v));
+
+    pathDiv.innerText = "Custom tree inserted.";
+    draw();
+  }
+
+  function insertBST(root, val){
+    if (!root) return new Node(val);
+    if (val < root.value) root.left = insertBST(root.left, val);
+    else root.right = insertBST(root.right, val);
+    return root;
+  }
+
+  /* -------------------- AUTO-FIT LAYOUT (fix clipped tree) --------------------
+     The earlier version could push nodes off-canvas for skewed/deep trees.
+     This version:
+     1) Builds logical x positions by inorder indexing (so nodes spread evenly).
+     2) Scales/centers the whole drawing to fit inside canvas with padding.
+  -----------------------------------------------------------------------------*/
+
+  function collectNodesInorder(node, arr){
+    if (!node) return;
+    collectNodesInorder(node.left, arr);
+    arr.push(node);
+    collectNodesInorder(node.right, arr);
+  }
+
+  function assignDepths(node, depth=0, map=new Map()){
+    if (!node) return map;
+    map.set(node, depth);
+    assignDepths(node.left, depth+1, map);
+    assignDepths(node.right, depth+1, map);
+    return map;
+  }
+
+  function layoutTree(root){
+    if (!root) return;
+
+    // 1) inorder spread: gives each node a unique "column"
+    const inorder = [];
+    collectNodesInorder(root, inorder);
+
+    // 2) depth map for rows
+    const depthMap = assignDepths(root);
+
+    // logical coordinates
+    const colGap = 80;     // logical horizontal spacing
+    const rowGap = 86;     // logical vertical spacing
+    inorder.forEach((node, i) => {
+      node._lx = i * colGap;
+      node._ly = depthMap.get(node) * rowGap;
+    });
+
+    // compute bounds of logical coords
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    inorder.forEach(n => {
+      minX = Math.min(minX, n._lx);
+      maxX = Math.max(maxX, n._lx);
+      minY = Math.min(minY, n._ly);
+      maxY = Math.max(maxY, n._ly);
+    });
+
+    // add node radius padding to bounds
+    const R = 24;
+    const pad = 34;
+    const logicalW = (maxX - minX) + R*2;
+    const logicalH = (maxY - minY) + R*2;
+
+    // fit scale
+    const fitW = canvas.width - pad*2;
+    const fitH = canvas.height - pad*2;
+    const scale = Math.min(fitW / Math.max(1, logicalW), fitH / Math.max(1, logicalH), 1.35); // allow slight upscaling
+
+    // center transform
+    const offsetX = (canvas.width - logicalW * scale) / 2;
+    const offsetY = (canvas.height - logicalH * scale) / 2;
+
+    // assign final canvas coords
+    inorder.forEach(n => {
+      n.x = offsetX + ((n._lx - minX) + R) * scale;
+      n.y = offsetY + ((n._ly - minY) + R) * scale;
+      n._scale = scale; // store for drawing radius scaling if desired
+    });
+  }
+
+  function draw(highlightNode=null, visitedNodes=[]){
+    ctx.clearRect(0,0,canvas.width, canvas.height);
+
+    // subtle grid
+    ctx.save();
+    ctx.globalAlpha = 0.07;
+    ctx.fillStyle = '#ffffff';
+    for (let x=0; x<canvas.width; x+=30) ctx.fillRect(x, 0, 1, canvas.height);
+    for (let y=0; y<canvas.height; y+=30) ctx.fillRect(0, y, canvas.width, 1);
+    ctx.restore();
+
+    if (!treeRoot) return;
+
+    layoutTree(treeRoot);
+    renderTree(treeRoot, highlightNode, visitedNodes);
+  }
+
+  function renderTree(node, highlightNode, visitedNodes){
+    if (!node) return;
+
+    // edges
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = COLORS.edge;
+    ctx.shadowBlur = 0;
+
+    if (node.left){
+      ctx.beginPath();
+      ctx.moveTo(node.x, node.y);
+      ctx.lineTo(node.left.x, node.left.y);
+      ctx.stroke();
+      renderTree(node.left, highlightNode, visitedNodes);
+    }
+    if (node.right){
+      ctx.beginPath();
+      ctx.moveTo(node.x, node.y);
+      ctx.lineTo(node.right.x, node.right.y);
+      ctx.stroke();
+      renderTree(node.right, highlightNode, visitedNodes);
+    }
+
+    // node
+    const isCurrent = (node === highlightNode);
+    const isVisited = visitedNodes.includes(node.value);
+
+    const scale = node._scale || 1;
+    const r = Math.max(18, 24 * Math.min(scale, 1.1));
+
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, r, 0, Math.PI*2);
+
+    if (isCurrent){
+      ctx.fillStyle = COLORS.current;
+      ctx.shadowColor = COLORS.current;
+      ctx.shadowBlur = 28;
+    } else if (isVisited){
+      ctx.fillStyle = COLORS.visited;
+      ctx.shadowColor = COLORS.visited;
+      ctx.shadowBlur = 18;
+    } else {
+      ctx.fillStyle = '#0b0b16';
+      ctx.shadowColor = 'rgba(255,255,255,0.16)';
+      ctx.shadowBlur = 12;
+    }
+    ctx.fill();
+
+    ctx.lineWidth = 3;
+    if (isCurrent){
+      ctx.strokeStyle = '#ffffff';
+      ctx.shadowColor = COLORS.current;
+      ctx.shadowBlur = 18;
+    } else if (isVisited){
+      ctx.strokeStyle = 'rgba(220,255,235,0.95)';
+      ctx.shadowColor = COLORS.visited;
+      ctx.shadowBlur = 10;
+    } else {
+      ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+      ctx.shadowColor = 'rgba(255,255,255,0.10)';
+      ctx.shadowBlur = 6;
+    }
+    ctx.stroke();
+
+    // text
+    ctx.shadowBlur = 0;
+    ctx.shadowColor = 'transparent';
+    ctx.fillStyle = (isCurrent || isVisited) ? '#050509' : '#f2f4ff';
+    ctx.font = `bold ${Math.max(12, 15 * Math.min(scale, 1.1))}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(node.value, node.x, node.y);
+  }
+
+  async function runTraversal(type){
+    if (isRunning || !treeRoot) return;
+    isRunning = true;
+    toggleButtons(true);
+
+    let sequence = [];
+    let visited = [];
+
+    pathDiv.innerText = `Starting ${type} traversal...`;
+
+    async function traverse(node){
+      if (!node) return;
+
+      if (type === 'preorder') await visit(node);
+      await traverse(node.left);
+      if (type === 'inorder') await visit(node);
+      await traverse(node.right);
+      if (type === 'postorder') await visit(node);
+    }
+
+    async function visit(node){
+      draw(node, visited);
+      sequence.push(node.value);
+      visited.push(node.value);
+      pathDiv.innerText = `${type}: ` + sequence.join(" → ");
+      await sleep(SLEEP_MS);
+    }
+
+    await traverse(treeRoot);
+    draw(null, visited);
+    pathDiv.innerText = `${type}: ` + sequence.join(" → ");
+
+    isRunning = false;
+    toggleButtons(false);
+  }
+
+  function toggleButtons(disabled){
+    ['preBtn','inBtn','postBtn'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = disabled;
+    });
+  }
+
+  resetTree();
+</script>
+</body>
+</html>
